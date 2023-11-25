@@ -3746,17 +3746,23 @@ int wiringPiISR (int pin, int mode, void (*function)(void))
   int   bcmGpioPin ;
   int ret;
 
-  if ((pin < 0) || (pin > 63))
-    return wiringPiFailure (WPI_FATAL, "wiringPiISR: pin must be 0-63 (%d)\n", pin) ;
-
   /**/ if (wiringPiMode == WPI_MODE_UNINITIALISED)
     return wiringPiFailure (WPI_FATAL, "wiringPiISR: wiringPi has not been initialised. Unable to continue.\n") ;
-  else if (wiringPiMode == WPI_MODE_PINS)
-    bcmGpioPin = pinToGpio [pin] ;
-  else if (wiringPiMode == WPI_MODE_PHYS)
-    bcmGpioPin = physToGpio [pin] ;
-  else
+  
+  if (wiringPiMode == WPI_MODE_GPIO)
+	  bcmGpioPin = pin ;
+	else if (wiringPiMode == WPI_MODE_GPIO_SYS)
     bcmGpioPin = pin ;
+  else{
+    if ((pin < 0) || (pin > 63))
+      return wiringPiFailure (WPI_FATAL, "wiringPiISR: pin or phy must be 0-63 (%d)\n", pin) ;
+    else if (wiringPiMode == WPI_MODE_PINS)
+      bcmGpioPin = pinToGpio [pin] ;
+    else if (wiringPiMode == WPI_MODE_PHYS)
+      bcmGpioPin = physToGpio [pin] ;
+    else
+      return wiringPiFailure (WPI_FATAL, "wiringPiISR: wiringPiMode %d is not soupported!\n") ;
+  }
 
 // Now export the pin and set the right edge
 //	We're going to use the gpio program to do this, so it assumes
@@ -3773,7 +3779,7 @@ int wiringPiISR (int pin, int mode, void (*function)(void))
     else
       modeS = "both" ;
 
-    sprintf (pinS, "%d", pin) ;
+    sprintf (pinS, "%d", bcmGpioPin) ;
 
     if ((pid = fork ()) < 0)	// Fail
       return wiringPiFailure (WPI_FATAL, "wiringPiISR: fork failed: %s\n", strerror (errno)) ;
